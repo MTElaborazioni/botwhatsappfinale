@@ -1,3 +1,9 @@
 flask
 twilio
 openai==0.28
+requests
+beautifulsoup4
+lxml
+rapidfuzz
+woocommerce
+python-dotenv
