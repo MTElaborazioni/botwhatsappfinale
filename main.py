@@ -44,6 +44,8 @@ def webhook():
 
     # 2. Se non conosco il nome, provo a estrarlo oppure lo chiedo
     if not name:
+        print("DEBUG‑1  entro nel ramo nome mancante")
+        print("DEBUG‑1  messaggio analizzato:", incoming_msg)
         # Pattern semplice "mi chiamo Luca" / "sono Luca"
         m = re.search(r"\b(?:mi chiamo|sono)\s+([A-Za-zÀ-ÿ'\- ]{2,})", incoming_msg, re.I)
         if m:
@@ -52,6 +54,7 @@ def webhook():
             cust["first_seen"] = time.time()
             clients[phone_key] = cust
             save_clients(clients)
+            print("DEBUG‑2  scritto su disco, len =", len(clients))
         else:
             return _twilio_resp("Ciao! 😊 Come ti chiami? (Es: \"mi chiamo Luca\")")
 
