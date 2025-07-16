@@ -4,8 +4,8 @@ import openai
 
 app = Flask(__name__)
 
-# ✅ Inserisci direttamente la tua API key (solo per test!)
-openai.api_key = "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"
+import os
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 
