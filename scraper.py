@@ -10,7 +10,6 @@ wc = API(
     consumer_key    = os.getenv("WC_KEY"),
     consumer_secret = os.getenv("WC_SECRET"),
     version = "wc/v3",
-    timeout = 40
     query_string_auth=True,
 )
 wc.verify_ssl = False 
