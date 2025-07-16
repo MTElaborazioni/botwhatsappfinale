@@ -11,8 +11,9 @@ wc = API(
     consumer_secret = os.getenv("WC_SECRET"),
     version = "wc/v3",
     timeout = 40
+    query_string_auth=True,
 )
-
+wc.verify_ssl = False 
 def fetch_all():
     per_page = 100        # max WooCommerce
     page     = 1
