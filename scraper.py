@@ -1,74 +1,49 @@
-import requests, json, time
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+# scraper.py
+import json, os, time
+from woocommerce import API
+from dotenv     import load_dotenv
 
-# Header finto da normale browser (evita pagine “vuote”/403)
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/126.0 Safari/537.36"
-    )
-}
+load_dotenv()                       # legge .env se esiste (utile in locale)
 
+wc = API(
+    url = os.getenv("WC_SITE"),
+    consumer_key    = os.getenv("WC_KEY"),
+    consumer_secret = os.getenv("WC_SECRET"),
+    version = "wc/v3",
+    timeout = 40
+)
 
-BASE = "https://www.mtelaborazioni.it"
-CAT_URLS = [
-    "/product-category/aspirazioni-dirette/",
-    "/product-category/intercooler-maggiorati/",
-    # ↳ aggiungi qui TUTTE le categorie principali
-]
-
-def scrap_category(cat_url):
-    """
-    cat_url deve *terminare* con "/", es. "/product-category/scarichi/"
-    """
+def fetch_all():
+    per_page = 100        # max WooCommerce
+    page     = 1
     products = []
-    page = 1
+
     while True:
-        # ➜  pagina 1  = URL base
-        # ➜  pagina 2+ = …/page/<n>/
-        url = urljoin(BASE, cat_url if page == 1 else f"{cat_url}page/{page}/")
-        print("→", url)
-
-        html = requests.get(url, headers=HEADERS, timeout=20).text
-        
-# DEBUG: guarda i primi 600 caratteri di HTML
-        print("‑‑‑ sorgente inizio ‑‑‑")
-        print(html[:600])
-        print("‑‑‑ fine ‑‑‑\n")
-
-        soup = BeautifulSoup(html, "lxml")
-
-        items = soup.select("ul.products li.product")
-        print(f"   trovati {len(items)} prodotti in questa pagina")
-        if not items:
-            break   # fine categoria
-
-        for li in items:
-            a = li.select_one("a.woocommerce-LoopProduct-link")
-            if not a:
-                continue
-            products.append({
-                "name": a.get_text(" ", strip=True),
-                "url": a["href"],
-                "price": (li.select_one(".price") or "").get_text(" ", strip=True),
-                "cat": cat_url.strip("/")
-            })
-
+        resp = wc.get("products", params={"per_page": per_page, "page": page})
+        resp.raise_for_status()
+        batch = resp.json()
+        if not batch:
+            break
+        products.extend(batch)
         page += 1
-        time.sleep(0.5)
+        print(f"scaricati {len(products)} prodotti…")
 
     return products
 
-
-def run():
-    all_prod = []
-    for cat in CAT_URLS:
-        all_prod += scrap_category(cat)
-    print("Totale prodotti:", len(all_prod))
-    with open("products.json", "w", encoding="utf-8") as f:
-        json.dump(all_prod, f, ensure_ascii=False, indent=2)
+def main(loop=False, delay_h=24):
+    while True:
+        data = fetch_all()
+        with open("/data/products.json", "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"💾 Salvati {len(data)} prodotti — {time.ctime()}")
+        if not loop:
+            break
+        time.sleep(delay_h * 3600)
 
 if __name__ == "__main__":
-    run()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--loop", action="store_true")
+    args = ap.parse_args()
+    main(loop=args.loop)
+
